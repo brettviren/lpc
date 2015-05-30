@@ -1,0 +1,154 @@
+#+TITLE: Little Projector Computer
+
+Let's attach a little computer to each projector.
+
+* Hardware
+
+** Requirements
+
+Here are some requirements:
+
+- small and low powered enough to go above ceiling tiles or cabled tied to projector mount
+- wired Ethernet and 802.11n wireless  connectivity
+- HDMI 1920x1080p @ 60 Hz
+- 4GB local storage
+
+Here are some preferred options
+
+- 8GB local storage
+- eMMC storage
+- available USB for keyboard+mouse during evaluation and setup
+- on-board mic
+- on-board IR remote control receiver
+
+Here are some uncertainties
+
+- Provide power via projector USB or dedicated wall-wart.  Projector kills power to USB when it turns off.  Want always-on, but not sure if outlet is available for a wall-wart, not sure if power-strip is "legal".
+
+** Survey
+
+Based on what single-board computers are currently available these models are considered, in alphabetical order:
+
+- Banana Pro (BPro)
+- BeagleBone Black (BBB)
+- Odroid C1 (OC1)
+- Orange Pi Plus (OPP)
+- Raspberry Pi 2 (RPi2)
+
+The survey captures relevant specifications and bare price and outfitted prices assuming the use of SD card and eMMC for OS and storage.  Commonalities:
+
+- RAM :: All have 1GB except BBB with 512 MB, they differ in DDR2 vs. DDR3
+- CPU :: All are ARMv7 compatible (can use standard Debian, etc)
+- USB :: All have USB 2.0, at least one USB Type A host, some have OTG and some use uUSB for power
+- Storage :: All have SD slots, some eMMC on-board, optional snap-on modules or not at all, some have SATA(!)
+- Network :: All have at least 100Mbps, some have on-board WiFi
+- Video :: All have HDMI (or uHDMI) at Full HD except for BBB which has 720p.
+
+*** Banana Pro (BPro)
+
+- CPU :: 2x1GHz
+- GPU :: ?xMali 400mp2
+- Storage :: uSD slot, SATA connector
+- USB :: 2 host, 1 OTG
+- Power :: uUSB
+- Network :: Ethernet: 10/100/1000, WiFi: b/g/n
+- Video :: HDMI
+
+Links:
+
+- [[http://www.lemaker.org/][Lemaker]] the maker :)
+- [[http://ameridroid.com/products/banana-pro][Ameridroid page]]
+
+*** BeagleBone Black (BBB)
+
+- CPU :: 1x1GHz
+- GPU :: ???
+- Storage :: 4GB on-board, uSD slot
+- USB :: 1 host
+- Power :: jack, miniUSB
+- Network :: Ethernet: 10/100
+- Video :: uHDMI, 720p max
+
+Links:
+
+- [[http://beagleboard.org/black][Beagle Board]]
+- [[http://elinux.org/Beagleboard:BeagleBoneBlack][Wiki]]
+- [[http://www.adafruit.com/products/1996][BBB at Adafruit]]
+
+*** Odroid C1 (OC1)
+
+- CPU :: 4x1.5GHz
+- GPU :: Mali-450mp2
+- Storage :: eMMC slot, uSD slot
+- USB :: 4 host, 1 otg (uUSB)
+- Power :: jack
+- Network :: Ethernet: 10/100/1000
+- Video :: uHDMI
+- extras :: IR receiver
+
+Links:
+
+- [[http://www.hardkernel.com/main/products/prdt_info.php][Hardkernel]] (maker)
+- [[http://ameridroid.com/products/odroid-c1][Ameridroid]] (seller)
+
+*** Orange Pi Plus (OPP)
+
+- CPU :: 4x1.6GHz
+- GPU :: Mali-400mp2
+- Storage :: 8GB eMMC on-board, SD slot, SATA connector
+- USB :: 4 host, 1 otg
+- Power :: jack
+- Network :: Ethernet: 10/100/1000, WiFi: b/g/n (Realtek RTL8189ETV)
+- Video :: HDMI
+- extras :: IR receiver
+
+Links:
+
+- [[http://www.orangepi.org/][Home page]]
+- [[http://www.aliexpress.com/store/product/NEW-orange-pi-plus-Allwinner-A31s-Dual-Core-1GB-RAM-Open-source-development-board/1553371_32248189300.html][Aliexpress]]
+
+*** Raspberry Pi 2 (RPi2)
+
+- CPU :: 4x900MHz 
+- GPU :: 2x VideoCore IV
+- Storage :: uSD
+- USB :: 4 host, power on uUSB
+- Power :: uUSB 
+- Network :: 100Mbps, Ethernet+USB shared
+- Video :: HDMI
+
+Links:
+
+- [[http://www.adafruit.com/pdfs/raspberrypi2modelb.pdf][Data sheet from Adafruit]]
+
+
+** Prices
+
+The price estimates assume Ethernet and WiFi connectivity (WiFi needs
+USB adapter in some cases).  Two options of 8GB SD or eMMC based
+storage are given.  If eMMC is on-board SD option is not considered
+and for BBB we just take its on-board 4GB eMMC.  Shipping is not
+considered.  A few bucks for 
+
+| model | 8GB SD | 8GB eMMC | Source     |
+|-------+--------+----------+------------|
+| BPro  |     64 |          | Ameridroid |
+| BBB   |     87 |          | Adafruit   |
+| OC1   |     67 |       82 | Ameridroid |
+| OPP   |        |       56 | Aliexpress |
+| RPi2  |     72 |          | Adafruit   |
+
+** Conclusions
+
+- BPro :: saves having a USB WiFi but this can be an added risk if on-board is problematic.  It's price competitive if no eMMC is desired.  Marginal features and long lead ordering at an unexceptional price knocks it out of the running.
+
+- BBB :: has become ridiculously far down on the bang-for-buck measure and will not be considered.
+
+- OC1 :: Solid performer, available now, expensive for if using eMMC.  Remains a candidate.
+
+- OPP :: a clear winner on the numbers but somewhat risky due to uncertainties related to lack community, long lead time and source.  On-board eMMC and WiFi good if they work.  Price, feature set and integration makes it a preferred candidate.
+
+- RPi2 :: doesn't really win on any metric except community and being better/cheaper than BBB.  Not considered.
+
+Final candidates are then *OC1* and *OPP*.
+
