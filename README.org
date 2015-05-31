@@ -152,3 +152,120 @@ considered.  A few bucks for
 
 Final candidates are then *OC1* and *OPP*.
 
+
+* Software Environment
+
+Note: what follows in this section is all conceptual for right now.
+
+An LPC runs the following software:
+
+ - an X11 Desktop Environment (DE) 
+ - a number of WAMP clients (see below)
+ - various connectivity programs (eg, VNC)
+
+** Interaction with the LPC
+
+Interaction with the LPCs is organized into two layers.
+
+*** Low level
+
+Low-level interaction with the LPC is through WAMP (see [[https://raw.githubusercontent.com/tavendo/WAMP/master/spec/figure/sessions2.png][this figure]] for quick definition of terms).  Here are some examples of how the four WAMP client roles are used:
+
+ - Caller :: a human /presenter/ executes an RPC on an LPC via a provided web page in order to start a VNC server and initiate a connection from a VNC viewer running on the presenter's laptop.
+
+ - Callee :: the LPC starts a VNC server attached to the DE.
+
+ - Publisher :: the LPC announces it has changed from state =IDLE= to state =VNC_SERVER=.  After the VNC server exits it announces it is back to state =IDLE= (more on states below).
+
+ - Subscriber :: all open LPC monitoring web pages update to show the state change of this LPC.
+
+*** End-user
+
+Humans interact through interfaces to the low-level protocol using a variety of command line utilities, web interfaces and GUI applications.  
+
+** Authentication and Authorization
+
+There are multiple forms of authentication and authorization:
+
+- Connection ::  the WAMP layer provides authentication realms which are used to implement low-level access policies.
+-  Location ::  a "room token" may be required for some LPC calls in order to determine that the Caller is physically present in the room in which the called LPC resides.  This token is a randomly generated message which the LPC can display on the DE and which is periodically renewed.  Were required this token must be passed as an argument to the call.
+- User ::  some applications which the LPC starts on the behest of a Caller require their own user authentication and/or authorization.  Examples include a VNC password or an SSH key.  Where required they must be passed as an argument to the call.
+
+** Commands and states
+
+An LPC is considered to be in a particular, well defined state and to transition between states based on calls to its available commands.  State changes are subject to constraints and when successful are published.
+
+*** Commands
+
+LPC commands are WAMP calls in the URI namespace:
+
+#+BEGIN_EXAMPLE
+<domain>.<location>.<call>
+#+END_EXAMPLE
+
+- =<domain>= :: a name for the organizational unit providing a set of LPCs managed together (typically the reverse-DNS domain name).  Example: =gov.bnl.phy=.
+- =<location>= :: an identifier of the physical location of a single LPC.  Example: =room3_192= (follow [[https://github.com/tavendo/WAMP/blob/master/spec/basic.md#identifiers][strict WAMP URI patterns]])
+- =<call>= :: the method to call
+
+Some example =<call>=s (note, actual spelling may change):
+
+- =show_token= :: display the current room token on the LPC DE
+- =renew_token= :: force a renewal of the current room token
+- =vnc_server= :: start a VNC server on the DE primed to accept the provided user password.
+- =vnc_viewer= :: start a VNC viewer pointed at a given VNC server and using the proided user password.
+- =ssh_connection= :: allow a one time SSH connection with the provided SSH public key 
+- =x11_connection= :: allow a single, direct X11 connection
+- =state= :: return the current state
+
+These last two may then be used by a presenter to start =x2x=, =synergy= or other remote mouse+keyboard control mechanisms.
+
+*** States
+
+The LPC states are meant to provide a simple, abstract indication of what the LPC is doing at any given time.  Allowed transitions between states are governed by a directed, cyclic graph.  Not all transitions are make sense or are indeed allowed. 
+
+[[./doc/commands.png]]
+
+
+* Other stuff
+
+Need to
+
+- index showing available commands (use [[https://github.com/tavendo/WAMP/blob/master/spec/advanced.md#reflection][WAMP reflection]] and [[http://crossbar.io/docs/Using-Schemas/][schemas]])
+- assert FSM constraints when running a command (and thus changing state) (state manged by LPC or by WAMP?)
+- run commands asynchronously and such that when they complete they update state.
+- return response to web giving any follow-on instructions/help/hints for the presenter to follow
+
+
+** Things to think about
+
+States:
+
+- Locking out changes and overrides
+- Recovery from error
+- Monitoring
+
+Projector:
+
+- Monitoring and controlling the projector video source
+- incorporating this into the state machine
+- switch to HDMI2 based on presenter connection
+- switch to HDMI1 if signal detected (possible?)
+
+Audio:
+
+What do?  The LPC may have a mic and could plug into the projector (does it have speakers?).
+
+Link to calendaring?  Initiate vidyo or bluejeans calls?  run seevogh?
+
+* Notes
+
+** WAMP, Crossbar, Autobahn
+
+- [[http://crossbar.io/docs/Installation-on-Linux/][Install crossbar]]
+- [[http://crossbar.io/docs/Getting-started-with-Python/][Python Crossbar]]
+- [[http://autobahn.ws/python/wamp/programming.html][Python Autobahn]]
+
+#+BEGIN_EXAMPLE
+$ cd tests/
+$ crossbar init --template hello:python --appdir hello
+#+END_EXAMPLE

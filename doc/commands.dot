@@ -1,0 +1,17 @@
+digraph "G" {
+
+off[label="OFFLINE\npowered down or no service"];
+
+idle[label="IDLE\nLPC service running waiting for commands"];
+
+active[label="ACTIVE\nan LPC command is running"];
+
+off->idle[label=" boot "];
+
+idle->active[label=" issue command "];
+
+active->idle[label=" command terminates "];
+
+idle->off[label=" shutdown "];
+
+	}
