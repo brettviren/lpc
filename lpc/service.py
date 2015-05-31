@@ -5,10 +5,12 @@ https://github.com/tavendo/AutobahnPython/blob/master/examples/twisted/wamp/begi
 
 import os
 import random
+import subprocess
 
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks,  returnValue
 from autobahn.wamp.exception import ApplicationError
 from autobahn.twisted.wamp import ApplicationSession
+from twisted.internet.defer import Deferred
 
 class LpcCommands(ApplicationSession):
     '''
@@ -31,6 +33,7 @@ class LpcCommands(ApplicationSession):
         self._uripat = u'%s.%s.%%s' % (domain, name)
 
         yield self.register(self.get_state, self.uri(u'get_state'))
+        yield self.register(self.display_token, self.uri(u'display_token'))
         #yield self.register(self.shutdown, self.uri(u'shutdown'))
 
         import commands
@@ -64,11 +67,20 @@ class LpcCommands(ApplicationSession):
         '''
         Make a new room token.
         '''
-        self.token = ''.join([str(random.randint(0,10)) for ind in range(4)])
+        self.token = ''.join([str(random.randint(0,9)) for ind in range(4)])
         print ('ROOM TOKEN: %s' % self.token)
         return
         
 
+    def display_token(self):
+        '''
+        Display the token
+        '''
+        cmd="zenity --info --text={} --timeout=300".format(self.token)
+        proc = subprocess.Popen(cmd, shell=True)
+        return proc.pid
+
+        
     def set_state(self, state):
         '''
         Unconditionally set the state to <state> and Publish.
@@ -93,6 +105,7 @@ class LpcCommands(ApplicationSession):
 
     def do_room_command(self, token, name, meth, *args, **kwds):
         if token != self.token:
+            print 'Bad room token, got:"%s want:"%s"' % (token, self.token)
             return 'Incorrect room token'
         return self.do_command(name, meth, *args, **kwds)
 
@@ -114,5 +127,5 @@ if '__main__' == __name__:
     from autobahn.twisted.wamp import ApplicationRunner
     extra = dict(name='lpc00', domain='com.example')
     runner = ApplicationRunner(url=u"ws://localhost:8080/ws", realm=u"realm1", extra=extra,
-                               debug = False, debug_wamp = True, debug_app = True)
+                               debug = False, debug_wamp = False, debug_app = True)
     runner.run(LpcCommands)

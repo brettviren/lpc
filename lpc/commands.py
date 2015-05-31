@@ -3,6 +3,7 @@ The commands the LPC implements.
 
 Each command is referenced by the function name and may block.
 '''
+import subprocess
 
 def cmd_vnc_server(password="", timeout=60):
     '''
