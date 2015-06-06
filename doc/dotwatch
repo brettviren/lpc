@@ -1,0 +1,7 @@
+#!/bin/bash
+what="$1"
+while inotifywait -e modify $what.dot
+do
+    dot -Tpdf -o $what.pdf $what.dot
+    dot -Tpng -o $what.png $what.dot
+done

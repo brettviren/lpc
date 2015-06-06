@@ -1,0 +1,75 @@
+digraph "G" {
+	label="";
+	
+	edge[arrowhead=none];
+	
+
+	subgraph cluster_admin {
+		label="Admin Workstation";
+		cmdline[label="WAMP cmdline\nutilities"];
+		webapp[label="WAMP 'live'\nJS web app"];
+	}
+
+
+	subgraph cluster_hub {
+		label="LPC Hub Computer";
+
+		router[label="WAMP message\nrouter service"];
+		wifi[shape=diamond,label="wifi"];
+		wire[shape=diamond,label="wire"];
+	
+		{rank=same; wire; router; wifi}
+		wire->router->wifi;		
+
+		auth[label="WAMP auth service\ndifferent realms:\n - per-room\n - admin"];
+		router->auth;
+
+		wifi_ws[label="WAMP WiFi web server\nAccept room and token\nIssue command (eg. start_vnc)"];
+		router->wifi_ws;
+
+	}
+
+	subgraph cluster_lpc {
+		label="Little Projector Computer";
+		lpcservice[label="LPC WAMP\nservice"];
+
+		screen[shape=box,label="Screen\n([token])"];
+		vncserver[shape=box, label="VNC"];
+		{rank=same;
+			screen;
+			vncserver}
+		lpcservice->screen[label="displays",arrowhead=normal];
+		lpcservice->vncserver[label="starts",arrowhead=normal];
+		
+	}
+
+	cmdline -> wire;
+	webapp -> wire;
+	wire -> auth;
+	
+	lpcservice -> wifi[label="WSS"];
+	lpcservice -> wifi[label="",style=invis];
+
+	wifi -> wifi_ws;
+	
+	subgraph cluster_presenter {
+		label="Presenter Laptop";
+		browser[shape=box,label="web browser"];
+		vncviewer[shape=box,label="VNC"];
+		{rank=same;
+			browser;
+			vncviewer}
+	}
+	browser -> wifi_ws[label="HTTPS"];
+	
+	browser -> screen[label="see/enter\nroom token",style=dotted];
+	vncviewer -> vncserver[style="dashed"];
+	
+
+	subgraph cluster_freeipa {
+		krb5[label="Kerberos"];
+		label="IDM Auth Server";
+	}
+	auth->krb5;
+	
+}

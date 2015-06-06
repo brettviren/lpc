@@ -1,0 +1,52 @@
+digraph "G" {
+	subgraph cluster_wifi {
+		label="Wireless Network";
+		
+		router_wifi[shape="diamond"];
+
+		subgraph cluster_master {
+			label="LPC Master";
+			node[shape=circle];
+			router[label="WAMP router"];
+			webserver[label="Web server"];
+		}
+		subgraph cluster_lpc {
+			label="Little Projector Computer";
+			node[shape=circle];
+			screen[shape=box, label="Projector Screen"];
+			backend[label="LPC backend"];
+			backend->screen[label=" display\ntoken "];
+			
+		}
+		subgraph cluster_laptop {
+			label="Presenter Laptop";
+			node[shape=box];
+			browser[label="Web browser"];
+		}
+		
+	}
+	subgraph cluster_wire {
+		label="Wired Network";
+			
+		router_wire[shape="diamond"];
+
+		subgraph cluster_admin {
+			label="Admin Workstation";
+			node[shape=box];
+			cmdline[shape=circle, label=" cmdline frontend "];
+			adminapp[label=" admin app "];
+		}
+	}
+
+
+	router -> backend[label=" forward command "];
+	backend -> router[label=" register\nupdate token "];
+	
+	webserver -> router[label=" issue command "];
+	webserver -> browser[label=" form "];
+	browser -> webserver[label= " room[+token]\ncommand "];
+
+	cmdline -> router[label=" command "];
+	adminapp -> router[label=" admin command "];
+	router -> adminapp[label=" live updates "];
+}

@@ -1,0 +1,60 @@
+#+TITLE: LPC Connections
+
+The whole of the LPC system is distributed among different computers on different network segments.  The figure below describes this.
+
+[[./conn.png]]
+
+* Computers
+
+** LPC Hub
+
+The LPC Hub Computer (LHC) is a centralizing point of the LPC system.  It's main purpose is to run the Crossbar WAMP "router" service.  In order to control and monitor the LPC system from administrator workstations the LHC is dual-homed
+having one NIC on the wired internal network and one on the wireless network.  The LHC explicitly does *not* route IP traffic between the two networks.  
+
+The only network service to listen on both NICs is Crossbar which provides WAMP functionality including authentication and authorization for the system.
+
+** Admin Workstation
+
+Is really any computer on the wired network from which an LPC administrator will control and monitor the LPC system.
+
+** Little Projector Computer
+
+** Presenter Laptop
+
+* WAMP services
+
+** Router
+
+** Auth
+
+** Web Service
+
+** LPC
+
+** Command line
+
+** Web App
+
+* Authentication
+
+** Realms
+
+There are the following types auth realms:
+
+- room :: one realm per room is created based on the LPC service registering.  Each realm requires a room token to authenticate.  Room tokens are periodically refreshed by the LPC service publishing it and the auth service subscribing to it.  The LPC service can display the room token on the projector screen.  The web service must supply the room token in order to issue RPC calls to the LPC.
+
+- system :: this realm controls access to subscribing to LPC  room token updates.
+
+- admin :: the auth server will provide authentication to the admin realm based on the FreeIPA IDM server.  
+
+* URIs
+
+PubSub:
+
+The LPC publishes on =<base>.<room>= these leaves:
+
+- =.token= :: the most recent room token
+- =.state= :: the current state of the LPC
+- =.command= :: a command initiated or exited
+
+Commands:

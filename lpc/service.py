@@ -6,59 +6,77 @@ https://github.com/tavendo/AutobahnPython/blob/master/examples/twisted/wamp/begi
 import os
 import random
 import subprocess
+from exceptions import OSError
 
-from twisted.internet.defer import inlineCallbacks,  returnValue
-from autobahn.wamp.exception import ApplicationError
+from twisted.internet.defer import inlineCallbacks, returnValue
 from autobahn.twisted.wamp import ApplicationSession
-from twisted.internet.defer import Deferred
 
 class LpcCommands(ApplicationSession):
     '''
     A WAMP client providing Callee for LPC commands and a Publisher exposing state changes.
     '''
-
-    # https://github.com/crossbario/crossbarexamples/blob/master/userconfig/python/component.py
-    # if not using crossbar, config needs:
-    #https://github.com/crossbario/crossbarexamples/blob/master/userconfig/python/component.py#L11
-
     @inlineCallbacks
     def onJoin(self, details):
         
-        self.state = 'OFF'
-        self.renew_token()
-
-        # fixme: is self.config.extra a dict?
         name = self.config.extra.get('name', os.environ.get('LPC_NAME', 'lpc'))
         domain = self.config.extra.get('domain', os.environ.get('LPC_DOMAIN', 'gov.bnl.phy'))
         self._uripat = u'%s.%s.%%s' % (domain, name)
 
-        yield self.register(self.get_state, self.uri(u'get_state'))
-        yield self.register(self.display_token, self.uri(u'display_token'))
-        #yield self.register(self.shutdown, self.uri(u'shutdown'))
+        self.state = 'OFF'
+        self.token_display_proc = None
+        self.renew_token()
 
+        self.register_command('get_state',       self.get_state,      False, None, None)
+        self.register_command('display_token',   self.display_token,  False, 'IDLE', 'TOKEN')
+        self.register_command('undisplay_token', self.undisplay_token, True, 'TOKEN', 'IDLE')
+
+
+        # Register our commands to do things on the system
         import commands
         for methname in dir(commands):
             if not methname.startswith('cmd_'):
                 continue
-            cmdname = methname[4:]
             meth = getattr(commands, methname)
-            if not meth:
-                raise ApplicationError('Failed to find command "{}"'.format(cmdname))
-                
-            if hasattr(meth,'token') and meth.token:
-                caller = lambda token, *a, **k: self.do_room_command(token, cmdname, meth, *a, **k)
-            else:
-                caller = lambda *a, **k: self.do_command(cmdname, meth, *a, **k)
+            
+            name = getattr(meth, 'name', methname[4:])
+            need_token = getattr(meth, 'token', True)
+            from_state = getattr(meth, 'from_state', 'IDLE')
+            to_state = getattr(meth, 'to_state', 'ACTIVE')
 
-            try:
-                yield self.register(caller, self.uri(cmdname))
-            except Exception as e:
-                print("failed to register procedure {}: {}".format(cmdname, e))
-            else:
-                print("procedure registered: {}".format(cmdname))
+            yield self.register_command(name, meth, need_token, from_state, to_state)
 
         self.set_state('IDLE')
+        returnValue("joined")
 
+    def register_command(self, name, meth, need_token=True, from_state='IDLE', to_state='ACTIVE'):
+        '''
+        Register method <meth> under command named <name> with state constraints.
+        '''
+        
+        if need_token:
+            name = 'inroom.' + name
+        uri = self.uri(name)
+        caller = lambda *a, **k: self.do_command(name, meth, from_state, to_state, *a, **k)
+        print("registering: {} {}->{}".format(uri,from_state,to_state))
+        return self.register(caller, uri)
+
+
+    def do_command(self, name, meth, from_state, to_state, *args, **kwds):
+        '''
+        Run the named command.
+        '''
+        if from_state and self.state != from_state:
+            return 'Can not run command "%s" while in state %s' % (name, self.state)
+        if to_state:
+            self.set_state(to_state)
+        self.publish(self.uri('running_command'), name)
+        print ('Running "%s"' % name)
+        ret = meth(*args, **kwds)
+        print ('Command "%s" return "%s"' % (name, str(ret)))
+        self.publish(self.uri('ran_command'), name)
+        if from_state:
+            self.set_state(from_state) # fixme: currently assume we go back to initial state
+        return ret
 
     def uri(self, name):
         return self._uripat % name
@@ -69,31 +87,59 @@ class LpcCommands(ApplicationSession):
         '''
         self.token = ''.join([str(random.randint(0,9)) for ind in range(4)])
         print ('ROOM TOKEN: %s' % self.token)
+        self.publish(self.uri('token'), self.token)
         return
-        
 
+    @inlineCallbacks
     def display_token(self):
         '''
         Display the token
         '''
-        cmd="zenity --info --text={} --timeout=300".format(self.token)
-        proc = subprocess.Popen(cmd, shell=True)
-        return proc.pid
+        self.undisplay_token()
 
-        
+        cmd="zenity --info --text={} --timeout=300".format(self.token)
+        self.token_display_proc = subprocess.Popen(cmd, shell=True)
+        rc = yield self.token_display_proc.wait()
+        returnValue(rc)
+
+    @inlineCallbacks
+    def undisplay_token(self):
+        if self.token_display_proc and self.token_display_proc.returncode == None:
+            print ("Undisplay token: terminating PID %d" % self.token_display_proc.pid)
+            try:
+                yield self.token_display_proc.terminate()
+            except OSError, e:
+                print ('Warning: failed to terminate token display: "%s"' % e)
+                pass
+        if self.token_display_proc and self.token_display_proc.returncode == None:
+            print ("Undisplay token: killing PID %d" % self.token_display_proc.pid)
+            try:
+                yield self.token_display_proc.kill() # it's dead, Jim
+            except OSError, e:
+                print ('Warning: failed to kill token display: "%s"' % e)
+                pass
+
+        self.token_display_proc = None
+        returnValue(None)
+
     def set_state(self, state):
         '''
         Unconditionally set the state to <state> and Publish.
         '''
         oldstate = self.state
         self.state = state
+        print ('Setting state from "%s" --> "%s"' % (oldstate, state))
         self.publish(self.uri('state_change'), oldstate, state)
 
+
+    # is this needed?  Does WAMP cache last published 'state_change'?
     def get_state(self):
         '''
         Return the current LPC state.
         '''
+        print ('Returning state: %s' % self.state)
         return self.state
+
 
     def shutdown(self):
         '''
@@ -103,25 +149,7 @@ class LpcCommands(ApplicationSession):
         #from twisted.internet import reactor
         #reactor.stop()
 
-    def do_room_command(self, token, name, meth, *args, **kwds):
-        if token != self.token:
-            print 'Bad room token, got:"%s want:"%s"' % (token, self.token)
-            return 'Incorrect room token'
-        return self.do_command(name, meth, *args, **kwds)
 
-    def do_command(self, name, meth, *args, **kwds):
-        '''
-        Run the named command.
-        '''
-        if self.state != "IDLE":
-            raise ApplicationError('Can not run command "%s" in state %s' % self.state)
-
-        self.set_state('ACTIVE')
-        self.publish(self.uri('running_command'), name)
-        ret = meth(*args, **kwds)
-        self.publish(self.uri('ran_command'), name)
-        return ret
-    
 
 if '__main__' == __name__:
     from autobahn.twisted.wamp import ApplicationRunner
